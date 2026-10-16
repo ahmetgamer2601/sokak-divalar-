@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anime Dövüş Oyunu: Nezuko vs Shiina</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        body {
+            background-color: #121212;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        #game-container {
+            text-align: center;
+            background: #1e1e1e;
+            border: 4px solid #444;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+        }
+
+        .ui-panel {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 800px;
+            margin-bottom: 15px;
+            background: #2a2a2a;
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: 2px solid #555;
+        }
+
+        .player-info {
+            width: 45%;
+        }
+
+        .player-info h3 {
+            margin-bottom: 5px;
+            font-size: 16px;
+            text-transform: uppercase;
+        }
+
+        .health-bar-container {
+            width: 100%;
+            background: #444;
+            height: 24px;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 2px solid #222;
+        }
+
+        .health-bar {
+            height: 100%;
+            width: 100%;
+            transition: width 0.2s ease-in-out;
+        }
+
+        #p1-health { background-color: #e74c3c; }
+        #p2-health { background-color: #3498db; }
+
+        .vs-badge {
+            font-size: 20px;
+            font-weight: bold;
+            color: #f1c40f;
+            text-shadow: 0 0 5px #f39c12;
+        }
+
+        canvas {
+            background: linear-gradient(to bottom, #1a1a2e, #16213e);
+            border: 4px solid #333;
+            border-radius: 6px;
+            display: block;
+            margin: 0 auto;
+        }
+
+        .controls-container {
+            display: flex;
+            justify-content: space-between;
+            width: 800px;
+            margin-top: 20px;
+            gap: 20px;
+        }
+
+        .control-group {
+            flex: 1;
+            background: #252525;
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid #444;
+        }
+
+        .control-group h4 {
+            margin-bottom: 10px;
+            color: #ccc;
+            font-size: 13px;
+        }
+
+        .btn-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        button {
+            background-color: #e67e22;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            font-size: 13px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.1s, transform 0.1s;
+            box-shadow: 0 3px #d35400;
+        }
+
+        button:active {
+            transform: translateY(2px);
+            box-shadow: 0 1px #d35400;
+        }
+
+        button:hover {
+            background-color: #f39c12;
+        }
+
+        button.kick {
+            background-color: #9b59b6;
+            box-shadow: 0 3px #8e44ad;
+        }
+        button.kick:hover { background-color: #af7ac5; }
+
+        button.hairpull {
+            background-color: #e84393;
+            box-shadow: 0 3px #d63031;
+        }
+        button.hairpull:hover { background-color: #fd79a8; }
+
+        button.block {
+            background-color: #27ae60;
+            box-shadow: 0 3px #229954;
+        }
+        button.block:hover { background-color: #2ecc71; }
+
+        #message-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 40px;
+            font-weight: bold;
+            color: #f1c40f;
+            text-shadow: 3px 3px 0px #000, 0 0 20px #e67e22;
+            display: none;
+            z-index: 10;
+            pointer-events: none;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container" style="position: relative;">
+        <div id="message-overlay">ROUND 1</div>
+
+        <div class="ui-panel">
+            <div class="player-info">
+                <h3>🌸 Nezuko (Skor: <span id="p1-score">0</span>)</h3>
+                <div class="health-bar-container">
+                    <div id="p1-health" class="health-bar"></div>
+                </div>
+            </div>
+            <div class="vs-badge">VS</div>
+            <div class="player-info" style="text-align: right;">
+                <h3>Skor: <span id="p2-score">0</span> - 🎨 Shiina Mashiro</h3>
+                <div class="health-bar-container">
+                    <div id="p2-health" class="health-bar" style="float: right;"></div>
+                </div>
+            </div>
+        </div>
+
+        <canvas id="gameCanvas" width="800" height="400"></canvas>
+
+        <div class="controls-container">
+            <div class="control-group">
+                <h4>NEZUKO KONTROLLERİ</h4>
+                <div class="btn-row">
+                    <button onclick="player1.move(-1)">⬅️ Sol</button>
+                    <button onclick="player1.move(1)">Sağ ➡️</button>
+                    <button onclick="player1.attack('punch')">👊 Yumruk</button>
+                    <button onclick="player1.attack('kick')" class="kick">🦵 Tekme</button>
+                    <button onclick="player1.attack('hairpull')" class="hairpull">💇 Saç Yol</button>
+                    <button onclick="player1.blockToggle()" class="block">🛡️ Blok</button>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <h4>SHIINA KONTROLLERİ</h4>
+                <div class="btn-row">
+                    <button onclick="player2.move(-1)">⬅️ Sol</button>
+                    <button onclick="player2.move(1)">Sağ ➡️</button>
+                    <button onclick="player2.attack('punch')">👊 Yumruk</button>
+                    <button onclick="player2.attack('kick')" class="kick">🦵 Tekme</button>
+                    <button onclick="player2.attack('hairpull')" class="hairpull">💇 Saç Yol</button>
+                    <button onclick="player2.blockToggle()" class="block">🛡️ Blok</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let gameActive = true;
+        let round = 1;
+
+        class Fighter {
+            constructor(x, name, hairColor, dressColor, accColor, facingRight) {
+                this.x = x;
+                this.y = 250;
+                this.width = 60;
+                this.height = 110;
+                this.name = name;
+                this.hairColor = hairColor;       // Karakter saç rengi (Nezuko: siyah/kahve, Shiina: sarı)
+                this.dressColor = dressColor;     // Kıyafet rengi (Nezuko: pembe, Shiina: beyaz/krem)
+                this.accColor = accColor;         // Kurdele / Detay rengi
+                this.facingRight = facingRight;
+                this.health = 100;
+                this.score = 0;
+                this.isAttacking = false;
+                this.attackType = null;
+                this.attackFrame = 0;
+                this.isBlocking = false;
+                this.isHit = false;
+                this.vx = 0;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+
+                let currentDressColor = this.dressColor;
+                if (this.isHit) currentDressColor = '#fff';
+                else if (this.isBlocking) currentDressColor = '#7f8c8d';
+
+                // Bacaklar
+                ctx.fillStyle = '#444';
+                ctx.fillRect(12, 60, 15, 50);
+                ctx.fillRect(33, 60, 15, 50);
+
+                // Gövde (Elbise)
+                ctx.fillStyle = currentDressColor;
+                ctx.fillRect(10, 0, 40, 60);
+
+                // Kafa
+                ctx.fillStyle = '#fce4ec'; // Ten rengi
+                ctx.fillRect(15, -30, 30, 30);
+
+                // Saçlar (Anime Tarzı)
+                ctx.fillStyle = this.hairColor;
+                ctx.fillRect(12, -35, 36, 15); // Üst saç
+                if (this.facingRight) {
+                    ctx.fillRect(40, -30, 10, 35); // Sağ saç sarkması
+                } else {
+                    ctx.fillRect(10, -30, 10, 35);  // Sol saç sarkması
+                }
+
+                // Saç Aksesuarı / Kurdele
+                ctx.fillStyle = this.accColor;
+                if (this.facingRight) {
+                    ctx.fillRect(35, -38, 12, 8);
+                } else {
+                    ctx.fillRect(13, -38, 12, 8);
+                }
+
+                // Gözler
+                ctx.fillStyle = '#000';
+                if (this.facingRight) {
+                    ctx.fillRect(35, -20, 5, 5);
+                } else {
+                    ctx.fillRect(20, -20, 5, 5);
+                }
+
+                // Kollar ve Özel Atak Animasyonları
+                if (this.isAttacking) {
+                    ctx.fillStyle = this.accColor;
+                    if (this.attackType === 'punch') {
+                        if (this.facingRight) ctx.fillRect(50, 10, 35, 12);
+                        else ctx.fillRect(-25, 10, 35, 12);
+                    } else if (this.attackType === 'kick') {
+                        if (this.facingRight) ctx.fillRect(45, 70, 40, 12);
+                        else ctx.fillRect(-25, 70, 40, 12);
+                    } else if (this.attackType === 'hairpull') {
+                        // Saç Yolma Efekti (Daha yukarıdan pençe gibi uzanan animasyon)
+                        ctx.fillStyle = '#e84393';
+                        if (this.facingRight) ctx.fillRect(40, -10, 45, 18);
+                        else ctx.fillRect(-25, -10, 45, 18);
+                    }
+                } else {
+                    ctx.fillStyle = currentDressColor;
+                    if (this.facingRight) ctx.fillRect(50, 10, 15, 40);
+                    else ctx.fillRect(-5, 10, 15, 40);
+                }
+
+                // Blok Kalkanı
+                if (this.isBlocking) {
+                    ctx.strokeStyle = '#2ecc71';
+                    ctx.lineWidth = 4;
+                    ctx.beginPath();
+                    if (this.facingRight) {
+                        ctx.arc(30, 30, 60, -Math.PI/2, Math.PI/2);
+                    } else {
+                        ctx.arc(30, 30, 60, Math.PI/2, 3*Math.PI/2);
+                    }
+                    ctx.stroke();
+                }
+
+                ctx.restore();
+            }
+
+            update() {
+                this.x += this.vx;
+                if (this.x < 10) this.x = 10;
+                if (this.x > canvas.width - this.width - 10) this.x = canvas.width - this.width - 10;
+                this.vx *= 0.8;
+
+                if (this.isAttacking) {
+                    this.attackFrame++;
+                    if (this.attackFrame > 12) {
+                        this.isAttacking = false;
+                        this.attackType = null;
+                        this.attackFrame = 0;
+                    }
+                }
+
+                if (this.isHit) {
+                    setTimeout(() => { this.isHit = false; }, 150);
+                }
+            }
+
+            move(dir) {
+                if (!gameActive) return;
+                this.vx = dir * 7;
+            }
+
+            attack(type) {
+                if (!gameActive || this.isAttacking) return;
+                this.isAttacking = true;
+                this.attackType = type;
+                this.attackFrame = 0;
+
+                let opponent = (this === player1) ? player2 : player1;
+                let distance = Math.abs((this.x + this.width/2) - (opponent.x + opponent.width/2));
+                
+                if (distance < 95) {
+                    if (opponent.isBlocking) {
+                        opponent.health -= (type === 'hairpull' ? 5 : 2);
+                        showFloatingText("BLOK!", opponent.x + 20, opponent.y - 40, "#2ecc71");
+                    } else {
+                        let damage = 10;
+                        let text = "-10";
+                        if (type === 'kick') { damage = 15; text = "-15 🦵"; }
+                        else if (type === 'hairpull') { damage = 22; text = "💇 SAÇ YOLMA! -22"; }
+                        else { text = "-10 👊"; }
+
+                        opponent.health -= damage;
+                        opponent.isHit = true;
+                        showFloatingText(text, opponent.x - 10, opponent.y - 50, type === 'hairpull' ? "#e84393" : "#e74c3c");
+                    }
+                    updateUI();
+                    checkWin();
+                }
+            }
+
+            blockToggle() {
+                if (!gameActive) return;
+                this.isBlocking = !this.isBlocking;
+                setTimeout(() => {
+                    this.isBlocking = false;
+                }, 800);
+            }
+        }
+
+        // Nezuko (P1) ve Shiina Mashiro (P2) Karakterleri Oluşturuluyor
+        // Nezuko: Siyah/Kahverengi saç, Pembe kimono/elbise, Kırmızı kurdele
+        // Shiina: Sarı saç, Beyaz/Krem elbise, Mavi kurdele
+        const player1 = new Fighter(150, 'Nezuko', '#3e2723', '#ff80ab', '#d50000', true);
+        const player2 = new Fighter(590, 'Shiina', '#fbc02d', '#eceff1', '#29b6f6', false);
+
+        let floatingTexts = [];
+        function showFloatingText(text, x, y, color) {
+            floatingTexts.push({ text, x, y, color, alpha: 1.0 });
+        }
+
+        function updateUI() {
+            document.getElementById('p1-health').style.width = Math.max(0, player1.health) + '%';
+            document.getElementById('p2-health').style.width = Math.max(0, player2.health) + '%';
+            document.getElementById('p1-score').innerText = player1.score;
+            document.getElementById('p2-score').innerText = player2.score;
+        }
+
+        function checkWin() {
+            if (player1.health <= 0 || player2.health <= 0) {
+                gameActive = false;
+                let winnerText = "";
+                if (player1.health <= 0 && player2.health <= 0) {
+                    winnerText = "BERABERE!";
+                } else if (player1.health <= 0) {
+                    winnerText = "SHİİNA MASHİRO KAZANDI! 🎨";
+                    player2.score++;
+                } else {
+                    winnerText = "NEZUKO KAZANDI! 🌸";
+                    player1.score++;
+                }
+
+                updateUI();
+                
+                const overlay = document.getElementById('message-overlay');
+                overlay.innerText = winnerText;
+                overlay.style.display = 'block';
+
+                setTimeout(() => {
+                    resetRound();
+                }, 3000);
+            }
+        }
+
+        function resetRound() {
+            round++;
+            player1.health = 100;
+            player2.health = 100;
+            player1.x = 150;
+            player2.x = 590;
+            gameActive = true;
+            
+            const overlay = document.getElementById('message-overlay');
+            overlay.innerText = `ROUND ${round}`;
+            overlay.style.display = 'block';
+            setTimeout(() => {
+                overlay.style.display = 'none';
+            }, 1500);
+
+            updateUI();
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Zemin Çizimi
+            ctx.fillStyle = '#0f1020';
+            ctx.fillRect(0, 350, canvas.width, 50);
+            ctx.strokeStyle = '#e84393';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(0, 350);
+            ctx.lineTo(canvas.width, 350);
+            ctx.stroke();
+
+            // Karakterler
+            player1.update();
+            player2.update();
+            player1.draw();
+            player2.draw();
+
+            // Kayan Yazılar
+            for (let i = floatingTexts.length - 1; i >= 0; i--) {
+                let ft = floatingTexts[i];
+                ctx.save();
+                ctx.font = "bold 16px 'Courier New'";
+                ctx.fillStyle = ft.color;
+                ctx.globalAlpha = ft.alpha;
+                ctx.fillText(ft.text, ft.x, ft.y);
+                ctx.restore();
+                ft.y -= 1.5;
+                ft.alpha -= 0.03;
+                if (ft.alpha <= 0) {
+                    floatingTexts.splice(i, 1);
+                }
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        updateUI();
+        animate();
+    </script>
+</body>
+</html>
